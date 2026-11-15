@@ -4,7 +4,7 @@ weight: 40
 description: "gfortran 15.2.0 as the reference, the foracle commands, and the gate of bib section 4.2 with its first figures and its verdict, A first."
 ---
 
-<!-- From the README of go-embedded-fortran/fortran at v0.16.0, sections "The oracle" and "The gate (bib §4.2)". Change the README first, then here. -->
+<!-- From the README of go-embedded-fortran/fortran at v0.17.0, sections "The oracle" and "The gate (bib §4.2)". Change the README first, then here. -->
 
 ## The oracle
 

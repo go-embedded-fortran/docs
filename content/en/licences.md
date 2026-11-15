@@ -4,7 +4,7 @@ weight: 50
 description: "BSD 3-Clause; what is ported with its notice, and what is only ever run."
 ---
 
-<!-- From the README and NOTICE statements of go-embedded-fortran/fortran at v0.16.0. Change the README first, then here. -->
+<!-- From the README and NOTICE statements of go-embedded-fortran/fortran at v0.17.0. Change the README first, then here. -->
 
 The `fortran` repository is under the BSD 3-Clause licence (see its `LICENSE`).
 Its `NOTICE` lists what is only run.

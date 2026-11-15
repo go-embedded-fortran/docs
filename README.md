@@ -13,7 +13,7 @@ with go-embedded-fortran's branding. The organization is **in development**: the
 site gives the status of the milestones, the front end, the I/O runtime, the oracle
 and the gate with its figures, and the licences. Every statement and figure is from
 the README of [go-embedded-fortran/fortran](https://github.com/go-embedded-fortran/fortran)
-at v0.16.0.
+at v0.17.0.
 
 ## Versions
 
@@ -29,7 +29,7 @@ tagged:
 
 `https://go-embedded-fortran.github.io/docs/` redirects to `latest/`. Each push
 to `main` replaces the directory of the version it describes, and nothing else.
-`fortran` is tagged v0.16.0, so the pages are published under `0.16/`, which
+`fortran` is tagged v0.17.0, so the pages are published under `0.17/`, which
 `latest/` follows.
 
 ## Layout

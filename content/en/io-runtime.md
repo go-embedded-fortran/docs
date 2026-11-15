@@ -4,7 +4,7 @@ weight: 30
 description: "Package rt: formatted and list-directed input and output ported from flang-rt, made to print what gfortran 15.2.0 prints, with its differential."
 ---
 
-<!-- From the README of go-embedded-fortran/fortran at v0.16.0, section "The I/O runtime (M4, part 1)". Change the README first, then here. -->
+<!-- From the README of go-embedded-fortran/fortran at v0.17.0, section "The I/O runtime (M4, part 1)". Change the README first, then here. -->
 
 Package `rt` is the Fortran runtime's formatted and list-directed input and
 output (bib section 5 row 1), in pure Go, ported from LLVM flang-rt
