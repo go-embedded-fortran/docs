@@ -1,0 +1,229 @@
+name: docs
+
+# Every documentation version is a separate Hugo build, published under
+# https://go-embedded-fortran.github.io/docs/<version>/ on the gh-pages branch, where
+# <version> is the newest minor version among the libraries the pages describe
+# (params.libraries in hugo.yaml: v0.1.2 -> 0.1), or "main" while none of
+# them is tagged. main is that version's source: each push to main replaces /docs/<version>/, and
+# /docs/latest/ follows the newest. Pull requests build and check, and publish
+# nothing.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# The build needs nothing beyond the source. Write access to the repository
+# is granted to the deploy job alone, below, so a pull request build cannot
+# push to gh-pages.
+permissions:
+  contents: read
+
+env:
+  HUGO_VERSION: "0.167.0"
+  # sha256 of hugo_${HUGO_VERSION}_linux-amd64.tar.gz, from the release's checksums.txt.
+  HUGO_SHA256: "4d84519b9f619e6d4c3fb45a50157abeabeb724f859c60605f44c23def6e1169"
+  DOCS_URL: "https://go-embedded-fortran.github.io/docs"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # themes/hextra (the tannevaled/hextra fork, pinned to a release tag)
+          # and branding (go-embedded-fortran/brand) are submodules.
+          submodules: recursive
+          # The whole history: each page's creation and modification come from git.
+          fetch-depth: 0
+
+      # The verified tarball is cached, keyed on the version and its checksum,
+      # so a cache hit needs no download; a miss retries the download (github.com
+      # answers release downloads with 503 and 504 at times). The checksum is
+      # checked in both cases, and a tarball that fails it is never cached
+      # (the cache is saved only when the job succeeds).
+      - name: Cache the Hugo tarball
+        id: hugo-cache
+        uses: actions/cache@v6
+        with:
+          path: /tmp/hugo.tar.gz
+          key: hugo-${{ env.HUGO_VERSION }}-${{ env.HUGO_SHA256 }}
+
+      - name: Install Hugo ${{ env.HUGO_VERSION }}
+        run: |
+          if [ "${{ steps.hugo-cache.outputs.cache-hit }}" != "true" ]; then
+            curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors --connect-timeout 30 \
+              -o /tmp/hugo.tar.gz \
+              "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_linux-amd64.tar.gz"
+          fi
+          echo "${HUGO_SHA256}  /tmp/hugo.tar.gz" | sha256sum -c -
+          sudo tar -xzf /tmp/hugo.tar.gz -C /usr/local/bin hugo
+          hugo version
+
+      # The version label is the newest minor version among the libraries
+      # params.libraries in hugo.yaml names ("main" until one is released), and
+      # it is the last segment of baseURL: the version selector reads it there.
+      - name: Version
+        id: version
+        run: |
+          set -euo pipefail
+          libs=$(hugo config --format json | jq -r '.params.libraries | to_entries[] | "\(.key) \(.value)"')
+          test -n "${libs}" || { echo "::error::params.libraries in hugo.yaml is empty"; exit 1; }
+          minors=""
+          while read -r name tag; do
+            if [ "${tag}" = main ]; then continue; fi
+            minor=$(printf '%s\n' "${tag}" | sed -nE 's/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/\1.\2/p')
+            if [ -z "${minor}" ]; then
+              echo "::error::params.libraries.${name} in hugo.yaml is \"${tag}\", not vMAJOR.MINOR.PATCH or main"
+              exit 1
+            fi
+            minors=$(printf '%s\n%s\n' "${minors}" "${minor}")
+          done <<< "${libs}"
+          version=$(printf '%s\n' "${minors}" | sed '/^$/d' | sort -t. -k1,1nr -k2,2nr | sed -n 1p)
+          version=${version:-main}
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "libraries: ${libs//$'\n'/ }; documentation version ${version}"
+
+      # Each page's creation (first commit, followed across renames) and its
+      # author, for the page history at its foot (params.page.history).
+      - name: Page history
+        run: |
+          mkdir -p data
+          sh themes/hextra/scripts/page-history.sh > data/pagehistory.json
+
+      # --panicOnWarning: a deprecated setting or a template warning fails the
+      # build rather than scrolling by. A broken {{< relref >}} is an error.
+      - name: Build
+        env:
+          HUGO_ENVIRONMENT: production
+        run: >-
+          hugo --gc --minify --panicOnWarning --printPathWarnings
+          --baseURL "${DOCS_URL}/${{ steps.version.outputs.version }}/"
+
+      # Internal links and anchors, offline, with the site laid out under
+      # /docs/<version>/ as it is served.
+      - name: Lay out the site for the link check
+        run: |
+          mkdir -p _check/docs
+          cp -R public "_check/docs/${{ steps.version.outputs.version }}"
+
+      - name: Check links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --offline --no-progress --include-fragments
+            --index-files index.html
+            --root-dir ${{ github.workspace }}/_check
+            '_check/docs/**/*.html'
+          fail: true
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: site
+          path: public
+          retention-days: 7
+
+  # The offline check above proves the site's own links and anchors. An
+  # https:// URL is text to it: this job fetches each one the pages name.
+  links:
+    name: every external link resolves
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      # linkcheck (go-fleettools/fleettools, pinned): retries with exponential
+      # backoff that honours Retry-After, github.com repo and path links decided
+      # through the REST API rather than the HTML page (which answers 504 and
+      # 429 to a runner under load), a DEAD link told apart from a FLAKY host.
+      # It already skips img.shields.io, example domains and localhost.
+      #
+      # --skip: this site's own pages exist only once this workflow has
+      # deployed them (the offline check above proves every link inside the
+      # site), and this repository's own files, on a pull request that adds
+      # them, are not on main yet.
+      #
+      # THE ONE DELIBERATE EXCEPTION to "no secret on a command line or in the
+      # environment": the job's ephemeral, read-only github.token (permissions:
+      # contents: read, for this job alone) reaches the tool as a 0600 file in
+      # RUNNER_TEMP, written by the shell builtin printf (no process argument,
+      # no environment variable) and removed on exit. It is sent to
+      # api.github.com only and never printed.
+      - name: Check
+        run: |
+          umask 077
+          token="${RUNNER_TEMP}/linkcheck-token"
+          trap 'rm -f "${token}"' EXIT
+          printf '%s' '${{ github.token }}' > "${token}"
+          go run github.com/go-fleettools/fleettools/cmd/linkcheck@v0.74.0 \
+            --token-file "${token}" \
+            --skip go-embedded-fortran.github.io/docs \
+            --skip github.com/go-embedded-fortran/docs/ \
+            content/ README.md
+
+  deploy:
+    # Only main publishes. A pull request stops after build above: it has no
+    # business pushing to gh-pages.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    # Never two deploys at once: both would push gh-pages and the second would
+    # be rejected. cancel-in-progress stays false -- killing a publish half way
+    # through is worse than making it wait.
+    concurrency:
+      group: gh-pages-deploy
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # The publishing script, from the commit being published.
+      - uses: actions/checkout@v7
+        with:
+          path: source
+
+      # The published site. Only the version being built is replaced; every
+      # other version stays as it is. The first deploy finds no gh-pages
+      # branch and starts it empty (orphan): nothing else ever creates it.
+      - uses: actions/checkout@v7
+        with:
+          path: gh-pages
+          fetch-depth: 0
+
+      - name: Switch to gh-pages
+        working-directory: gh-pages
+        run: |
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null; then
+            git fetch -q origin gh-pages
+            git checkout -q -B gh-pages FETCH_HEAD
+          else
+            echo "no gh-pages branch yet: starting one"
+            git checkout -q --orphan gh-pages
+            git rm -rqf .
+            git clean -fdxq
+          fi
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: site
+          path: site
+
+      - name: Publish ${{ needs.build.outputs.version }}
+        run: source/scripts/publish-version.sh "${{ needs.build.outputs.version }}" site gh-pages
+
+      - name: Push gh-pages
+        working-directory: gh-pages
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "nothing changed"
+            exit 0
+          fi
+          git commit -q -m "Deployed ${GITHUB_SHA::7} to ${{ needs.build.outputs.version }} with Hugo ${HUGO_VERSION}"
+          git push origin HEAD:gh-pages
