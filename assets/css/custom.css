@@ -1,0 +1,35 @@
+/* go-embedded-fortran branding on Hextra (github.com/go-embedded-fortran/brand).
+ *
+ * The mark's gradient, #F472B6 -> #9D174D (branding/svg/color/go-embedded-fortran.svg).
+ * Hextra derives its whole primary scale (links, active sidebar entry,
+ * buttons) from these three variables.
+ *
+ * Light theme: #9D174D = hsl(336 74% 35%), the gradient's dark end
+ *              (7.88:1 on white).
+ * Dark theme:  #F472B6 = hsl(329 86% 70%), its light end. */
+:root {
+  --primary-hue: 336deg;
+  --primary-saturation: 74%;
+  --primary-lightness: 35%;
+}
+.dark {
+  --primary-hue: 329deg;
+  --primary-saturation: 86%;
+  --primary-lightness: 70%;
+}
+
+/* Tables: their headers stand out in the brand colour and their text is a
+ * size smaller than the prose. In the dark theme the header keeps the dark
+ * end: white on the light end cannot be read. */
+.content table { font-size: 0.875em; }
+.content table th { background: #9D174D; color: #fff; }
+
+/* The version selector's list hangs from its button's right edge, so that it
+ * stays on screen at the end of the navbar. */
+.fs-version-select .hextra-nav-menu-items { left: auto !important; right: 0; transform: none !important; }
+
+/* The outdated-version banner (layouts/_partials/custom/content-begin.html). */
+.nd-outdated { margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 0.5rem;
+  border: 1px solid #f59e0b; background: #fffbeb; color: #78350f; }
+.dark .nd-outdated { background: #451a03; color: #fde68a; border-color: #b45309; }
+.nd-outdated a { text-decoration: underline; font-weight: 600; }
