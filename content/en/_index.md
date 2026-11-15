@@ -7,22 +7,24 @@ cascade:
 description: "Fortran in pure Go, in development: a front end, an evaluator checked against gfortran 15.2.0, an I/O runtime ported from flang-rt, an oracle harness and a measured gate."
 ---
 
-<!-- Every statement and figure on this site is from the README of go-embedded-fortran/fortran at v0.16.0 (github.com/go-embedded-fortran/fortran). Change the README first, then here. -->
+<!-- Every statement and figure on this site is from the README of go-embedded-fortran/fortran at v0.17.0 (github.com/go-embedded-fortran/fortran). Change the README first, then here. -->
 
 **go-embedded-fortran is in development.** Its repository,
 [fortran](https://github.com/go-embedded-fortran/fortran) (module
-`github.com/go-embedded-fortran/fortran`, latest release v0.16.0), is meant to
+`github.com/go-embedded-fortran/fortran`, latest release v0.17.0), is meant to
 become a Fortran implementation written in Go (`CGO_ENABLED=0`), embedded in Go
-programs and run in the browser through WebAssembly. It will back the
-` ```fortran ` cells of [go-notebook](https://github.com/go-notebook), as
-[go-embedded-c](https://github.com/go-embedded-c/c) backs its C cells.
+programs and run in the browser through WebAssembly. It backs the
+` ```fortran ` cells of [go-notebook](https://github.com/go-notebook) since
+v0.17.0, which run in one session (`eval.Session`; their variables do not cross
+to other languages yet, and the playground's core does not link the runtime
+yet), as [go-embedded-c](https://github.com/go-embedded-c/c) backs its C cells.
 
 The plan is the bibliography of the go-scikit roadmap,
 [`bib/fortran.md`](https://github.com/go-scikit/roadmap/blob/main/bib/fortran.md).
 Every stage is checked against a reference, never against expectations written
 by hand.
 
-## What exists at v0.16.0
+## What exists at v0.17.0
 
 - **A front end in Go.** `syntax`, a lexer and parser (free and fixed form),
   and `sema`, a semantic analyser producing a typed tree.

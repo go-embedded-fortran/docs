@@ -4,7 +4,7 @@ weight: 20
 description: "The parser (syntax), its parse rate on three corpora, the semantic analysis (sema) with its differential against gfortran, and the cell splitter."
 ---
 
-<!-- From the README of go-embedded-fortran/fortran at v0.16.0, sections "The parser", "Semantic analysis" and "The cell splitter". Change the README first, then here. -->
+<!-- From the README of go-embedded-fortran/fortran at v0.17.0, sections "The parser", "Semantic analysis" and "The cell splitter". Change the README first, then here. -->
 
 ## The parser
 
@@ -148,4 +148,4 @@ unit are main-program material that needs no `END`. A cell is then split:
 `complex64|complex128`, `logical` to `bool`, `character` to `string`, arrays to
 `*ndarray.Array`, derived types opaque; `integer(16)`, `real(10)` and
 `real(16)` have none). The adapter that fills go-notebook's `analysis.Cell`
-belongs to the language registration in go-notebook and is not written.
+belongs to the language registration in go-notebook (`analysis/parsers`).
